@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Social Media Prediction Markets</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+  <link rel="stylesheet" href="/static/css/style.css" />
+</head>
+<body>
+  <div class="app-container">
+
+    <!-- ═══════ Header ═══════ -->
+    <header class="app-header">
+      <div class="header-content">
+        <div class="logo">
+          <div class="logo-icon">&#x1f4c8;</div>
+          <div class="logo-text">
+            <h1>Prediction Markets</h1>
+            <span>Social Media &amp; Cultural Milestones</span>
+          </div>
+        </div>
+        <div class="header-status">
+          <div class="status-dot"></div>
+          <span>Engine Ready</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- ═══════ Navigation ═══════ -->
+    <nav class="nav-tabs" role="tablist">
+      <button class="nav-tab active" data-tab="predict" role="tab">
+        <span class="tab-icon">&#x1f3af;</span> Predict
+      </button>
+      <button class="nav-tab" data-tab="growth" role="tab">
+        <span class="tab-icon">&#x1f4c8;</span> Growth Curves
+      </button>
+      <button class="nav-tab" data-tab="simulate" role="tab">
+        <span class="tab-icon">&#x1f3b2;</span> Simulate
+      </button>
+      <button class="nav-tab" data-tab="edge" role="tab">
+        <span class="tab-icon">&#x26a1;</span> Edge Detector
+      </button>
+    </nav>
+
+    <!-- ═══════════════════════════════════════════════════════
+         TAB 1: PREDICT
+         ═══════════════════════════════════════════════════════ -->
+    <section id="panel-predict" class="tab-panel active">
+      <div class="grid-2" style="grid-template-columns: 380px 1fr;">
+
+        <!-- Config Panel -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title"><span class="icon">&#x2699;&#xfe0f;</span> Configuration</div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Demo Scenarios</label>
+            <div class="scenario-pills" id="predict-scenarios">
+              <button class="scenario-pill active" data-scenario="linear">Linear</button>
+              <button class="scenario-pill" data-scenario="exponential">Exponential</button>
+              <button class="scenario-pill" data-scenario="logistic">Logistic</button>
+              <button class="scenario-pill" data-scenario="viral">Viral</button>
+              <button class="scenario-pill" data-scenario="plateau">Plateau</button>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="predict-entity">Entity Name</label>
+            <input class="form-input" id="predict-entity" value="MrBeast" placeholder="Channel, app, or account name" />
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="predict-platform">Platform</label>
+              <select class="form-select" id="predict-platform">
+                <option value="youtube">YouTube</option>
+                <option value="tiktok">TikTok</option>
+                <option value="instagram">Instagram</option>
+                <option value="twitter">Twitter / X</option>
+                <option value="twitch">Twitch</option>
+                <option value="spotify">Spotify</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="predict-metric">Metric</label>
+              <select class="form-select" id="predict-metric">
+                <option value="subscribers">Subscribers</option>
+                <option value="followers">Followers</option>
+                <option value="views">Views</option>
+                <option value="streams">Streams</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="predict-target">Target Value</label>
+              <input class="form-input" id="predict-target" type="number" value="100000" />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="predict-deadline">Deadline (days)</label>
+              <input class="form-input" id="predict-deadline" type="number" value="365" placeholder="Optional" />
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="predict-market">Market Price (0-1)</label>
+            <input class="form-input" id="predict-market" type="number" step="0.01" min="0" max="1" value="0.50" placeholder="Current market probability" />
+          </div>
+
+          <button class="btn btn-primary btn-full" id="btn-predict" onclick="runPredict()">
+            <span class="tab-icon">&#x1f3af;</span> Run Prediction
+          </button>
+        </div>
+
+        <!-- Results Panel -->
+        <div style="display: flex; flex-direction: column; gap: 20px;">
+          <!-- Stat Row -->
+          <div class="grid-4" id="predict-stats">
+            <div class="stat-card">
+              <div class="stat-value neutral" id="stat-probability">--</div>
+              <div class="stat-label">Probability</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-value amber" id="stat-ci">--</div>
+              <div class="stat-label">90% CI</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-value" id="stat-edge" style="color: var(--text-secondary);">--</div>
+              <div class="stat-label">Edge vs Market</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-value" id="stat-pattern" style="color: var(--accent-purple); font-size: 1.2rem;">--</div>
+              <div class="stat-label">Growth Pattern</div>
+            </div>
+          </div>
+
+          <!-- Gauge + Chart -->
+          <div class="grid-2">
+            <div class="card" style="position: relative;">
+              <div class="loading-overlay" id="predict-loading">
+                <div class="spinner"></div>
+                <div class="loading-text">Running probability engine...</div>
+              </div>
+              <div class="gauge-container" id="predict-gauge">
+                <div class="gauge-ring">
+                  <svg width="200" height="200" viewBox="0 0 200 200">
+                    <circle class="gauge-bg" cx="100" cy="100" r="85" />
+                    <circle class="gauge-fill" id="gauge-arc" cx="100" cy="100" r="85"
+                      stroke-dasharray="534" stroke-dashoffset="534" stroke="var(--accent-blue)" />
+                  </svg>
+                  <div class="gauge-center">
+                    <div class="gauge-percent" id="gauge-value">--%</div>
+                    <div class="gauge-sublabel">Probability</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card-header">
+                <div class="card-title"><span class="icon">&#x1f4ca;</span> Historical Data</div>
+              </div>
+              <div class="chart-container">
+                <canvas id="predict-chart"></canvas>
+              </div>
+            </div>
+          </div>
+
+          <!-- Reasoning -->
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title"><span class="icon">&#x1f9e0;</span> Model Reasoning</div>
+            </div>
+            <div class="reasoning-block" id="predict-reasoning">
+              Click "Run Prediction" to see the model's analysis and reasoning chain.
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════════════
+         TAB 2: GROWTH CURVES
+         ═══════════════════════════════════════════════════════ -->
+    <section id="panel-growth" class="tab-panel">
+      <div class="grid-2" style="grid-template-columns: 380px 1fr;">
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title"><span class="icon">&#x1f4c8;</span> Growth Analysis</div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Demo Scenarios</label>
+            <div class="scenario-pills" id="growth-scenarios">
+              <button class="scenario-pill active" data-scenario="linear">Linear</button>
+              <button class="scenario-pill" data-scenario="exponential">Exponential</button>
+              <button class="scenario-pill" data-scenario="logistic">Logistic</button>
+              <button class="scenario-pill" data-scenario="viral">Viral</button>
+              <button class="scenario-pill" data-scenario="plateau">Plateau</button>
+            </div>
+          </div>
+          <button class="btn btn-primary btn-full" onclick="runGrowthFit()">
+            <span class="tab-icon">&#x1f4c8;</span> Fit Growth Curves
+          </button>
+          <div id="growth-model-list" style="margin-top: 20px;"></div>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 20px;">
+          <div class="card" style="position: relative;">
+            <div class="loading-overlay" id="growth-loading">
+              <div class="spinner"></div>
+              <div class="loading-text">Fitting growth models...</div>
+            </div>
+            <div class="card-header">
+              <div class="card-title"><span class="icon">&#x1f4c9;</span> Curve Fit Comparison</div>
+              <div id="growth-best-badge"></div>
+            </div>
+            <div class="chart-container" style="height: 450px;">
+              <canvas id="growth-chart"></canvas>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title"><span class="icon">&#x1f4cb;</span> Model Parameters</div>
+            </div>
+            <div style="overflow-x: auto;">
+              <table class="data-table" id="growth-table">
+                <thead>
+                  <tr>
+                    <th>Model</th>
+                    <th>R&#xb2;</th>
+                    <th>AIC</th>
+                    <th>Residual &#x3c3;</th>
+                    <th>Parameters</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════════════
+         TAB 3: SIMULATE
+         ═══════════════════════════════════════════════════════ -->
+    <section id="panel-simulate" class="tab-panel">
+      <div class="grid-2" style="grid-template-columns: 380px 1fr;">
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title"><span class="icon">&#x1f3b2;</span> Monte Carlo</div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Demo Data</label>
+            <div class="scenario-pills" id="sim-scenarios">
+              <button class="scenario-pill active" data-scenario="exponential">Exponential</button>
+              <button class="scenario-pill" data-scenario="logistic">Logistic</button>
+              <button class="scenario-pill" data-scenario="viral">Viral</button>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Horizon (days)</label>
+              <input class="form-input" id="sim-horizon" type="number" value="365" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Simulations</label>
+              <input class="form-input" id="sim-count" type="number" value="2000" />
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Target Value (optional)</label>
+            <input class="form-input" id="sim-target" type="number" placeholder="e.g. 500000" />
+          </div>
+          <button class="btn btn-primary btn-full" onclick="runSimulation()">
+            <span class="tab-icon">&#x1f3b2;</span> Run Simulation
+          </button>
+          <div id="sim-stats" style="margin-top: 20px;"></div>
+        </div>
+
+        <div class="card" style="position: relative;">
+          <div class="loading-overlay" id="sim-loading">
+            <div class="spinner"></div>
+            <div class="loading-text">Running Monte Carlo simulation...</div>
+          </div>
+          <div class="card-header">
+            <div class="card-title"><span class="icon">&#x1f30a;</span> Simulation Paths</div>
+            <div id="sim-target-badge"></div>
+          </div>
+          <div class="chart-container" style="height: 500px;">
+            <canvas id="sim-chart"></canvas>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════════════
+         TAB 4: EDGE DETECTOR
+         ═══════════════════════════════════════════════════════ -->
+    <section id="panel-edge" class="tab-panel">
+      <div class="grid-2" style="grid-template-columns: 380px 1fr;">
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title"><span class="icon">&#x26a1;</span> Edge Detection</div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Demo Data</label>
+            <div class="scenario-pills" id="edge-scenarios">
+              <button class="scenario-pill active" data-scenario="exponential">Exponential</button>
+              <button class="scenario-pill" data-scenario="logistic">Logistic</button>
+              <button class="scenario-pill" data-scenario="viral">Viral</button>
+              <button class="scenario-pill" data-scenario="plateau">Plateau</button>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Entity Name</label>
+            <input class="form-input" id="edge-entity" value="MrBeast" />
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Target Value</label>
+              <input class="form-input" id="edge-target" type="number" value="200000" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Market Price</label>
+              <input class="form-input" id="edge-market" type="number" step="0.01" value="0.50" />
+            </div>
+          </div>
+          <button class="btn btn-primary btn-full" onclick="runEdge()">
+            <span class="tab-icon">&#x26a1;</span> Detect Edge
+          </button>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 20px;">
+          <div class="card" style="position: relative;">
+            <div class="loading-overlay" id="edge-loading">
+              <div class="spinner"></div>
+              <div class="loading-text">Analyzing market edge...</div>
+            </div>
+
+            <div id="edge-recommendation"></div>
+
+            <div class="grid-3" id="edge-stats" style="margin-bottom: 20px;">
+              <div class="stat-card">
+                <div class="stat-value neutral" id="edge-stat-model">--</div>
+                <div class="stat-label">Model Price</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-value amber" id="edge-stat-market">--</div>
+                <div class="stat-label">Market Price</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-value" id="edge-stat-net">--</div>
+                <div class="stat-label">Net Edge</div>
+              </div>
+            </div>
+
+            <div class="card-header">
+              <div class="card-title"><span class="icon">&#x1f50d;</span> Edge Signals</div>
+            </div>
+            <div id="edge-signals">
+              <div style="text-align: center; color: var(--text-muted); padding: 40px 0; font-size: 0.9rem;">
+                Click "Detect Edge" to analyze market mispricing signals.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <footer class="app-footer">
+      Social Media Prediction Markets Engine &middot; Built with scipy, numpy, and Monte Carlo simulation
+    </footer>
+  </div>
+
+  <script src="/static/js/app.js"></script>
+</body>
+</html>
